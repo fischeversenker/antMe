@@ -15,6 +15,8 @@ namespace AntMe.Spieler
         private int kleinerRadius = 20;
         private int großerRadius = 150;
         private int feindRadius = 100;
+        private int tickCounter = 0;
+        private String state = "suchen";
  
 
         public MeineAmeise(MeineBasisAmeise masterMeise) {
@@ -29,8 +31,15 @@ namespace AntMe.Spieler
 		/// </summary>
 		public override void Wartet()
         {
-            masterMeise.DreheUmWinkel(Zufall.Zahl(-10, 10));
-            masterMeise.GeheGeradeaus(20);
+            if (state != "specialForce")
+            {
+                masterMeise.DreheUmWinkel(Zufall.Zahl(-10, 10));
+                masterMeise.GeheGeradeaus(20);
+            }
+            else
+            {
+                masterMeise.GeheGeradeaus();
+            }
             
 		}
 
@@ -53,7 +62,8 @@ namespace AntMe.Spieler
 		/// <param name="zucker">Der nächstgelegene Zuckerhaufen.</param>
 		public override void Sieht(Zucker zucker)
 		{
-            if (masterMeise.AktuelleLast / masterMeise.MaximaleLast < 0.8)
+            state = "arbeiten";
+            if (masterMeise.AktuelleLast / masterMeise.MaximaleLast < 0.6)
             {
                 masterMeise.GeheZuZiel(zucker);
             }
@@ -108,17 +118,24 @@ namespace AntMe.Spieler
             
             // Koordinate.BestimmeRichtung gibt immer einen Wert kleiner 359 aus.
             // Ich habe Werte kleiner 360 den Sammlern zugeteilt, Werte zwischen 360 und 719 für Krieger, 720 - 1079 vielleicht Späher oder so?
-            if (markierung.Information < 360 && !(masterMeise.Ziel is Zucker) && !(masterMeise.Ziel is Bau) && !(masterMeise.Ziel is Markierung))
-            {
-                if (Koordinate.BestimmeEntfernung(masterMeise, markierung) < 50 && markierung.Information != 0)
+            if(markierung.Information >= 720 && markierung.Information < 1080 && masterMeise.AktuelleLast == 0){
+                state = "specialForce";
+                masterMeise.DreheInRichtung(markierung.Information - 180);
+                masterMeise.GeheGeradeaus(100);
+            }
+            if(!(masterMeise.Ziel is Zucker) && !(masterMeise.Ziel is Bau) && !(masterMeise.Ziel is Markierung)){if (markierung.Information < 360)
                 {
-                    masterMeise.DreheInRichtung(markierung.Information);
-                    masterMeise.GeheGeradeaus(20);
-                }
-                else
-                {
-                    masterMeise.SprüheMarkierung(Koordinate.BestimmeRichtung(masterMeise, markierung), großerRadius);
-                    masterMeise.GeheZuZiel(markierung);
+                    if (Koordinate.BestimmeEntfernung(masterMeise, markierung) < 50 && markierung.Information != 0 && state != "specialForce")
+                    {
+                        masterMeise.DreheInRichtung(markierung.Information);
+                        masterMeise.GeheGeradeaus(20);
+                    }
+                    else
+                    {
+                        state = "arbeiten";
+                        masterMeise.SprüheMarkierung(Koordinate.BestimmeRichtung(masterMeise, markierung), großerRadius);
+                        masterMeise.GeheZuZiel(markierung);
+                    }
                 }
             }
 		}
@@ -151,7 +168,6 @@ namespace AntMe.Spieler
 		/// <param name="wanze">Die nächstgelegene Wanze.</param>
 		public override void SiehtFeind(Wanze wanze)
 		{
-            masterMeise.SprüheMarkierung(Koordinate.BestimmeRichtung(masterMeise, wanze)+360, feindRadius);
 		}
 
 		/// <summary>
@@ -191,7 +207,6 @@ namespace AntMe.Spieler
 		/// <param name="todesart">Die Todesart der Ameise</param>
 		public override void IstGestorben(Todesart todesart)
         {
-            masterMeise.SprüheMarkierung(360, feindRadius);
 		}
 
 		/// <summary>

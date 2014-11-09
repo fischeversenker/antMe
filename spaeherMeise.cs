@@ -3,17 +3,24 @@ using System.Collections.Generic;
 
 using AntMe.Deutsch;
 
+// Füge hier hinter AntMe.Spieler einen Punkt und deinen Namen ohne Leerzeichen
+// ein! Zum Beispiel "AntMe.Spieler.WolfgangGallo".
 namespace AntMe.Spieler
 {
 
-    public class KKIAmeise : AbstrakteKonkreteMeise
+    public class SpäherAmeise : AbstrakteKonkreteMeise
     {
-        
-        private MeineBasisAmeise masterMeise;
-        private int kleinerRadius = 50;
-        private int großerRadius = 100;
 
-        public KKIAmeise(MeineBasisAmeise masterMeise) {
+        private MeineBasisAmeise masterMeise;
+        private int kleinerRadius = 20;
+        private int großerRadius = 150;
+        private int feindRadius = 100;
+        private int FundStelle;
+        private int tickCounter = 0;
+        private String state = "suche";
+
+        public SpäherAmeise(MeineBasisAmeise masterMeise)
+        {
             this.masterMeise = masterMeise;
         }
 
@@ -25,8 +32,15 @@ namespace AntMe.Spieler
         /// </summary>
         public override void Wartet()
         {
-                masterMeise.DreheUmWinkel(Zufall.Zahl(-20, 20));
+            if (state == "suche")
+            {
+                masterMeise.DreheUmWinkel(Zufall.Zahl(-32, 32));
                 masterMeise.GeheGeradeaus(20);
+            }
+            else if (state == "wegZumBau")
+            {
+                masterMeise.GeheZuBau();
+            }
         }
 
         /// <summary>
@@ -48,15 +62,11 @@ namespace AntMe.Spieler
         /// <param name="zucker">Der nächstgelegene Zuckerhaufen.</param>
         public override void Sieht(Zucker zucker)
         {
-            Spielobjekt z = masterMeise.Ziel;
-            masterMeise.SprüheMarkierung(Koordinate.BestimmeRichtung(masterMeise,zucker), großerRadius);
-            if (z != null)
+            // @TODO masterMeise.SprüheMarkierung(); Damit alle anderen Späher weglaufen
+            if (state == "suche")
             {
-                masterMeise.GeheZuZiel(z);
-            }
-            else
-            {
-                masterMeise.GeheGeradeaus(20);
+                state = "gefunden";
+                masterMeise.GeheZuZiel(zucker);
             }
         }
 
@@ -76,6 +86,8 @@ namespace AntMe.Spieler
         /// <param name="zucker">Der Zuckerhaufen.</param>
         public override void ZielErreicht(Zucker zucker)
         {
+            state = "angekommen";
+            masterMeise.GeheZuBau();
         }
 
         /// <summary>
@@ -99,32 +111,6 @@ namespace AntMe.Spieler
         /// <param name="markierung">Die nächste neue Markierung.</param>
         public override void RiechtFreund(Markierung markierung)
         {
-            if (!(masterMeise.Ziel is Wanze) && !(masterMeise.Ziel is Bau))
-            {
-                if (markierung.Information >= 360 && markierung.Information < 720)
-                {
-                    int z = Koordinate.BestimmeEntfernung(masterMeise, markierung);
-                    if (Koordinate.BestimmeEntfernung(masterMeise, markierung) < 50 && markierung.Information != 360)
-                    {
-                        masterMeise.DreheInRichtung(markierung.Information-360);
-                        masterMeise.GeheGeradeaus(20);
-                    }
-                    else
-                    {
-                        masterMeise.SprüheMarkierung(Koordinate.BestimmeRichtung(masterMeise, markierung)+360, kleinerRadius);
-                        masterMeise.GeheZuZiel(markierung);
-                    }
-                }
-                else if(markierung.Information != 0)
-                {
-                    masterMeise.DreheInRichtung(markierung.Information - 180);
-                    masterMeise.GeheGeradeaus(20);
-                }
-                else
-                {
-                    masterMeise.GeheGeradeaus(50);
-                }
-            }
         }
 
         /// <summary>
@@ -155,15 +141,6 @@ namespace AntMe.Spieler
         /// <param name="wanze">Die nächstgelegene Wanze.</param>
         public override void SiehtFeind(Wanze wanze)
         {
-            masterMeise.SprüheMarkierung(360, großerRadius);
-            if (masterMeise.AktuelleEnergie >= masterMeise.MaximaleEnergie * 3 / 5)
-            {
-                masterMeise.GreifeAn(wanze);
-            }
-            else
-            {
-                masterMeise.GeheZuBau();
-            }
         }
 
         /// <summary>
@@ -182,7 +159,6 @@ namespace AntMe.Spieler
         /// <param name="wanze">Die angreifende Wanze.</param>
         public override void WirdAngegriffen(Wanze wanze)
         {
-            masterMeise.GreifeAn(wanze);
         }
 
         /// <summary>
@@ -204,7 +180,6 @@ namespace AntMe.Spieler
         /// <param name="todesart">Die Todesart der Ameise</param>
         public override void IstGestorben(Todesart todesart)
         {
-            masterMeise.SprüheMarkierung(360, großerRadius);
         }
 
         /// <summary>
@@ -212,9 +187,29 @@ namespace AntMe.Spieler
         /// </summary>
         public override void Tick()
         {
-            if ((masterMeise.Reichweite - masterMeise.ZurückgelegteStrecke - 50 < masterMeise.EntfernungZuBau) || masterMeise.AktuelleEnergie < masterMeise.MaximaleEnergie * 4 / 5)
+            int z = masterMeise.RestWinkel;
+
+            if (state == "angekommen")
             {
-                masterMeise.GeheZuBau();
+                state = "wegZumBau";
+                tickCounter = 0;
+            }
+            else if (state == "wegZumBau")
+            {
+                tickCounter++;
+                if (tickCounter == 30)
+                {
+                    FundStelle = masterMeise.Richtung;
+                }
+                if (masterMeise.EntfernungZuBau < 10 && masterMeise.EntfernungZuBau >= 1)
+                {
+                    masterMeise.SprüheMarkierung(FundStelle + 720, 100);
+                }
+                else if (masterMeise.EntfernungZuBau < 1)
+                {
+                    state = "suche";
+                    masterMeise.BleibStehen();
+                }
             }
         }
 

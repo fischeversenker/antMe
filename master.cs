@@ -26,12 +26,12 @@ namespace AntMe.Spieler
     [Kaste(
         Name = "KKI",
         GeschwindigkeitModifikator = -1,
-        DrehgeschwindigkeitModifikator = -1,
+        DrehgeschwindigkeitModifikator = 1,
         LastModifikator = -1,
         ReichweiteModifikator = -1,
         SichtweiteModifikator = 0,
-        EnergieModifikator = 2,
-        AngriffModifikator = 2
+        EnergieModifikator = 1,
+        AngriffModifikator = 1
     )]
 
     [Kaste(
@@ -44,16 +44,28 @@ namespace AntMe.Spieler
         EnergieModifikator = -1,
         AngriffModifikator = -1
     )]
+    [Kaste(
+        Name = "Späher",
+        GeschwindigkeitModifikator = 1,
+        DrehgeschwindigkeitModifikator = 1,
+        LastModifikator = -1,
+        ReichweiteModifikator = 0,
+        SichtweiteModifikator = 1,
+        EnergieModifikator = -1,
+        AngriffModifikator = -1
+    )]
 
     public class MeineBasisAmeise : Basisameise
     {
         private AbstrakteKonkreteMeise meise;
         public override string BestimmeKaste(Dictionary<string, int> anzahl)
         {
-            if ((anzahl["Standard"] + anzahl["KKI"]) % 5 == 0)
+            
+            if ((anzahl["Standard"] + anzahl["Späher"]) % 5 == 0)
             {
-                meise = new KKIAmeise(this);
-                return "KKI";
+                meise = new SpäherAmeise(this);
+                return "Späher";
+            
             }
             meise = new MeineAmeise(this);
             return "Standard";
